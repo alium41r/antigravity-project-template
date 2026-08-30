@@ -1,0 +1,3 @@
+-- Supabase Local SQL Seed
+-- Use this file to populate local test users, storage buckets, or test auth data
+-- that runs after Supabase migrations execute.
