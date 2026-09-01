@@ -51,6 +51,7 @@ Before running commands or modifying files:
    - `Authentication Required`: `[Yes / No]`
    - `Rendering Strategy`: `[Server Components + SSR default / Static Export (SSG) / Client-Heavy]`
    - `Styling Choice`: `[Tailwind CSS / CSS Modules]`
+5. **Record Project Tier**: Add `Project Tier: T[N] — [Description]` to `brain.md` §0 (T1 Static Marketing · T2 Content / Editorial · T3 Public Interactive Tool · T4 E-Commerce Storefront · T5 Internal / Team App · T6 SaaS Platform). Later steps that reference T1–T6 (e.g. Playwright provisioning, PRD scope, security review depth) resolve against this taxonomy.
 
 ---
 
@@ -176,7 +177,7 @@ Prisma is used strictly as an ORM and type-safe query client. **Prisma never run
 | :--- | :--- |
 | **Fresh local project** | 1. `npx supabase start`<br>2. `npx prisma db pull`<br>3. `npx prisma generate` |
 | **Normal schema change** | 1. `npx supabase migration new <name>`<br>2. Edit `supabase/migrations/<ts>_<name>.sql`<br>3. `npx supabase migration up`<br>4. `npm run db:sync` *(runs `prisma db pull && prisma generate`)* |
-| **Full local reset** | `npm run db:reset` *(runs `supabase db reset && prisma db pull && prisma generate`)* |
+| **Full local reset** | `npm run db:reset` *(runs `npx supabase db reset && npx prisma db pull && npx prisma generate`)* |
 | **Remote deployment** | 1. `npx supabase db push`<br>2. `npx prisma generate` *(in CI/build step)*<br>3. Deploy Next.js |
 | **Continuous Integration (CI)** | 1. `npx supabase start`<br>2. `npx prisma db pull && git diff --exit-code prisma/schema.prisma`<br>3. `npx prisma generate`<br>4. `npx vitest run`<br>5. `npx supabase stop` |
 

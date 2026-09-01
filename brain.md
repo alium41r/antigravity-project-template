@@ -17,6 +17,7 @@
 
 ## 0. Template Defaults vs. Project-Specific Decisions
 This repository provides a production-grade fullstack baseline, but not all projects require all architectural layers:
+- **Project Tier**: `[T1 Static Marketing | T2 Content / Editorial | T3 Public Interactive Tool | T4 E-Commerce Storefront | T5 Internal / Team App | T6 SaaS Platform] — [Description]` *(Recorded during initialization by the `project-initializer` skill. This field drives capability activation, SETUP step applicability, design-system depth, and the `vibe-security` audit scope.)*
 - **Baseline Template Defaults**: Next.js (App Router), TypeScript, Prisma ORM, and Supabase (PostgreSQL, Auth, Storage).
 - **Project-Specific Activation**: Each capability (database persistence, authentication, billing, email, realtime) is activated only if explicitly required by the project's scope.
 - **Minimalism & Overrides**: For lightweight websites, public tools, or marketing sites that do not require user accounts or a database, unused template modules remain inactive without introducing dead complexity or forcing unwanted dependencies.
