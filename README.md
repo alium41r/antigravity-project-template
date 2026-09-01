@@ -19,6 +19,7 @@ This template adheres to idiomatic Next.js conventions while strictly isolating 
 ├── research/            # Market research, user discovery, and technical feasibility spikes
 ├── specifications/      # PRDs, feature specs, user stories, acceptance criteria, API contracts
 ├── architecture/        # System blueprints, data flow diagrams, tech stack, migration boundary
+├── design-system/       # Canonical visual & interaction implementation system (MASTER.md + page overrides)
 ├── decisions/           # Architecture Decision Records (ADRs) tracking technical choices
 ├── documentation/       # Developer onboarding, coding guidelines, and operational runbooks
 ├── src/                 # Idiomatic Next.js application source code

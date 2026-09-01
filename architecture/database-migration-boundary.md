@@ -97,6 +97,7 @@ npm run db:sync
 npm run db:reset
 # (or: ./scripts/db-reset.sh)
 ```
+`scripts/db-reset.sh` is destructive (local only): it prompts for explicit confirmation unless `--force` is passed (CI with disposable databases).
 Behind the scenes, this runs:
 1. `npx supabase db reset` (recreates DB, replays `supabase/migrations/*.sql`, runs `supabase/seed.sql`)
 2. `npx prisma db pull` (refreshes `prisma/schema.prisma`)
@@ -142,3 +143,4 @@ npx supabase stop
 3. **All DDL in Supabase Migrations**: Every table, column, index, enum, extension, RLS policy, and trigger must be authored as SQL in `supabase/migrations/`.
 4. **Mandatory RLS**: Every table created in `public` must have Row-Level Security enabled (`ALTER TABLE <table_name> ENABLE ROW LEVEL SECURITY;`) with explicit access policies declared before being deployed.
 5. **Sync Immediately After Migration**: Always execute `npm run db:sync` (or `./scripts/db-sync.sh`) immediately after applying any migration locally so TypeScript types stay synchronized with PostgreSQL.
+6. **Prisma Does Not Inherit RLS**: Prisma queries run as a privileged database role that bypasses PostgreSQL RLS over direct connections. Application queries using Prisma must explicitly scope by user ID or tenant (`where: { userId }`). RLS only guards direct client or PostgREST access via the Supabase client.

@@ -5,8 +5,9 @@
 > This directory houses authentication design documentation, provider setup guides, and session lifecycle specifications.
 >
 > **Where Executable Code Lives**:
-> - All Supabase Auth client singletons, server session helpers (`getServerSession`), and OAuth callbacks belong strictly in [`src/lib/auth/`](../../src/lib/auth).
-> - Auth page views belong in [`src/app/(auth)/`](../../src/app/\(auth\)).
+> - **Supabase Client Factories**: Singletons for browser, server (`@supabase/ssr`), and privileged service-role admin access belong exclusively in [`src/lib/db/supabase.ts`](../../src/lib/db/supabase.ts). Never create competing Supabase client factories in this directory.
+> - **Authentication & Session Helpers**: Server session utilities (`getServerSession`, `requireUser`), session validators, and auth-specific helper logic belong in [`src/lib/auth/`](../../src/lib/auth) and must consume the clients exported from `src/lib/db/supabase.ts`.
+> - **Authentication UI Pages**: Auth page views belong in [`src/app/(auth)/`](../../src/app/\(auth\)).
 
 ## Focus Areas
 - Session lifecycle and token refresh specifications

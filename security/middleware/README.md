@@ -1,9 +1,9 @@
-# Edge Security Middleware Specifications
+# Edge Security Proxy & Request Interception Specifications
 
 > [!IMPORTANT]
-> **DOCUMENTATION ONLY — NO EXECUTABLE CODE**
-> Next.js strictly requires executable middleware to reside at [`src/middleware.ts`](../../src) (or the project root).
-> This directory is reserved for documenting middleware security policies, route guard rules, and HTTP header specifications.
+> **DOCUMENTATION & SPECIFICATIONS ONLY — NO EXECUTABLE CODE**
+> Next.js 16+ deprecated the `middleware.ts` file convention in favor of a `proxy.ts` file exporting a `proxy` function. While Next.js accepts the file at the project root or inside `src/`, this template strictly requires it at [`src/proxy.ts`](../../src).
+> This directory is maintained for backward-compatible documentation organization, reserved strictly for housing edge security governance, route protection specifications, and HTTP header policies. Never place executable code in this directory.
 
 ## Focus Areas
 - Route protection rules: mapping public vs. authenticated vs. role-gated URL paths

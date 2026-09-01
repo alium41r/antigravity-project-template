@@ -4,4 +4,4 @@ Define interface contracts, payload schemas, query parameters, error response fo
 
 ## Standards
 - Prefer type-safe contracts compatible with TypeScript and Zod.
-- Document both public REST endpoints and internal Route Handlers.
+- Document public REST endpoints and webhook Route Handlers (Route Handlers are reserved for webhooks, external integrations, and public REST per `project_constitution.md` Article V).

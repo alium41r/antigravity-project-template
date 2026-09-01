@@ -8,12 +8,15 @@
 When resolving conflicting statements, requirements, or conventions across the repository, AI agents and human developers must adhere deterministically to the following strict hierarchy of authority (highest to lowest):
 
 1. **`project_constitution.md`** (along with [`SETUP.md`](SETUP.md) for project instantiation) — Immutable engineering rules, architectural principles, security standards, and AI agent operating doctrine.
-2. **`brain.md`** — Canonical project strategy, product context, constraints, and active project-level decisions (including Section 15 stack decisions and capability overrides).
+2. **`brain.md`** — Canonical project strategy, product context, constraints, and active project-level decisions (including Section 15 stack decisions, capability overrides, and Section 9 brand/design intent).
 3. **`architecture/`** — Technical architecture specifications, system blueprints, and subsystem boundary definitions (e.g. [`database-migration-boundary.md`](architecture/database-migration-boundary.md)).
-4. **`specifications/`** — Feature and product implementation contracts, PRDs, acceptance criteria, and API schemas.
-5. **`decisions/records/` (ADRs)** — Historical rationale for architectural decisions. *Rule*: ADRs document why a choice was made at a specific point in time; an ADR never overrides a newer documented decision or convention in `brain.md` or `architecture/`.
-6. **`product/vision.md` and other product documents** — Derived, human-readable product summaries intended for pitch and design discussions. Strictly subordinate to `brain.md`.
-7. **Individual `README.md` files** — Local directory guidance, file maps, and navigation orientation only.
+4. **`security/`** — Binding security governance: authentication flow specs, RBAC matrices, edge proxy policy, RLS/data-access policy specifications, and audit standards. *Governance and specifications only* — executable security code lives in `src/` and `supabase/migrations/`, never here.
+5. **`specifications/`** — Feature and product implementation contracts, PRDs, acceptance criteria, and API schemas.
+6. **`design-system/MASTER.md`** (plus `design-system/pages/<page>.md` overrides) — Canonical visual & interaction implementation system. Strictly subordinate to `brain.md` §9: `brain.md` defines brand *intent*, the design system defines visual *execution*. Page override files govern only their own route.
+7. **`decisions/records/` (ADRs)** — Historical rationale for architectural decisions. *Rule*: ADRs document why a choice was made at a specific point in time; an ADR never overrides a newer documented decision or convention in `brain.md` or `architecture/`.
+8. **`research/`** — Dated research findings (market, user, spikes) carrying the four-tier attribution taxonomy. Research is *evidence*: it informs decisions but never overrides any higher tier, and it may only change `brain.md` or `architecture/` through explicit user approval plus the ADR path.
+9. **`product/vision.md` and other product documents** — Derived, human-readable product summaries intended for pitch and design discussions. Strictly subordinate to `brain.md`.
+10. **Individual `README.md` files** — Local directory guidance, file maps, and navigation orientation only.
 
 ### Expected Reading Order for Product & Feature Implementation:
 When planning, designing, or implementing features, AI agents must read product and technical documents in this deterministic sequence:
@@ -22,11 +25,14 @@ When planning, designing, or implementing features, AI agents must read product 
 3. **`product/personas/`**: Detailed user and buyer persona research, pain points, and workflow motivations.
 4. **`product/journeys/`**: Detailed end-to-end user journeys and lifecycle state diagrams across persona touchpoints.
 5. **`specifications/features/`**: Concrete, implementation-level feature contracts, input/output schemas, and acceptance criteria. (Read immediately before modifying code).
+6. **`design-system/MASTER.md` and `design-system/pages/<page>.md`** (when they exist): Canonical visual and interaction implementation system. Read immediately before authoring or modifying UI code; the page override for the route being touched governs that route.
 
 ### Deterministic Conflict Resolution Rules:
 - **Higher-Tier Authority Governs**: If a lower-tier document contradicts a higher-tier document, the higher-tier document wins unconditionally. The lower-tier document must be updated to align.
 - **Repository State as Implementation Truth**: Running application code, active configuration files (`tsconfig.json`, `prisma/schema.prisma`, `supabase/config.toml`, `.env.example`), and version control state represent the actual implementation reality. If documentation describes an implementation feature that does not exist or differs from active code, inspect the code first, verify against `brain.md`/ADRs whether the drift is intentional, and reconcile the documentation with implementation truth.
 - **Historical ADRs Do Not Override Active Rules**: An accepted ADR records intent at the time of authoring. If subsequent architectural changes supersede an ADR, the previous ADR must be marked `Superseded` with a pointer to the new decision rather than creating competing active rules.
+- **Research Findings Are Evidence, Not Authority**: Documents in `research/` inform decisions but never override tiers 1–7. A research finding that contradicts `brain.md`, `architecture/`, `security/`, or an active ADR must be escalated with its attribution tags; it changes canonical truth only via explicit user approval and the ADR/supersede process.
+- **Design Intent vs. Execution**: `brain.md` §9 defines brand intent; `design-system/MASTER.md` defines visual execution. When they diverge, `brain.md` governs and the design system must be regenerated or updated to align.
 
 ---
 
@@ -66,7 +72,7 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
    - Domain logic lives in `src/server/services/`.
    - Data access lives in `src/server/repositories/` and Prisma.
    - Executable authentication code lives strictly in `src/lib/auth/`.
-   - Executable edge middleware lives strictly at `src/middleware.ts`.
+   - Executable edge request interception (Proxy) lives strictly at `src/proxy.ts` (Next.js 16+ convention; exported function `proxy`).
    - Executable RLS SQL migrations live strictly in `supabase/migrations/*.sql`.
    - The root `security/` directory is strictly for governance documentation, access matrices, and policy specifications—never executable code.
 3. **Obtain Alignment**: When making architectural additions or breaking changes, present the proposal to the user before editing code.
@@ -83,7 +89,7 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
 
 ---
 
-## Article VI: Single Database Migration Pipeline & ORM Boundary
+## Article VI: Single Database Migration Pipeline, ORM & Security Boundary
 *(Applies to projects utilizing a relational database and Supabase)*
 1. **Dormant When Unused**: If a project is purely static or client-side with no persistence requirements, database tooling remains dormant.
 2. **Single Migration Pipeline**: When database persistence is utilized, adhere unconditionally to [`architecture/database-migration-boundary.md`](architecture/database-migration-boundary.md). Supabase SQL is the **single source of truth** for all database migrations.
@@ -102,6 +108,12 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
    - Supabase migrations execute chronologically by filename timestamp.
    - Extensions must precede tables referencing them; tables must precede RLS policies, foreign keys, or triggers referencing them.
    - Always run `db-sync.sh` (or `prisma db pull && prisma generate`) immediately after applying Supabase migrations to keep `@prisma/client` synchronized with the database.
+6. **Prisma vs. Supabase RLS Authorization Boundary**:
+   - **Supabase Client/PostgREST Perimeter**: Direct client and PostgREST interactions executed via the Supabase client are secured at the database layer via PostgreSQL Row-Level Security (RLS) policies evaluating authenticated claims (`auth.uid()`, roles).
+   - **Prisma Connection Reality**: Server-side Prisma operations connect directly through PostgreSQL connection strings (`DATABASE_URL` / `DIRECT_URL`) as a privileged database role that bypasses PostgreSQL RLS. **Prisma queries do NOT automatically inherit Supabase RLS protections.**
+   - **Explicit Scoping in Prisma Queries**: Prisma repositories, domain services, and Server Actions must never assume RLS enforces application authorization. Every Prisma query and mutation must explicitly scope operations by authenticated user, tenant, organization, or resource ownership (e.g. `where: { id: resourceId, userId: session.user.id }`).
+   - **Privileged Access Isolation**: Service-role, batch, and administrative database operations must be strictly isolated, audited, and treated as privileged, never relying on client-supplied identity or client-claimed authority.
+   - **Independent Security Auditing**: Security tooling, skills, and code reviews must audit Prisma database access separately from Supabase RLS migration policies.
 
 ---
 
@@ -111,22 +123,23 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
 2. **Supabase Auth as Default Provider**: When user authentication is required, use Supabase Auth for identity management, session tokens, and OAuth callbacks.
 3. **Cookie-Based SSR Sessions**: Use `@supabase/ssr` with secure HTTP-only cookies to handle authentication across Server Components, Server Actions, and Route Handlers.
 4. **Defense in Depth**:
-   - **Edge Protection**: Next.js Middleware verifies session validity and guards protected route groups.
-   - **Server Logic Guards**: Server Actions and API routes must independently verify the authenticated user ID and role; never rely solely on middleware.
-   - **Database Policies**: PostgreSQL Row-Level Security (RLS) acts as the final perimeter.
+   - **Edge Protection**: Next.js Proxy (`src/proxy.ts`) verifies session validity and guards protected route groups.
+   - **Server Logic Guards**: Server Actions and API routes must independently verify the authenticated user ID and role; never rely solely on edge proxy request interception.
+   - **Application Query Boundary**: Prisma repositories and services must explicitly enforce user/tenant scoping on all data operations.
+   - **Database Policies**: PostgreSQL Row-Level Security (RLS) acts as the database perimeter for Supabase client queries and storage.
 5. **RBAC Discipline**: Validate permissions against defined role matrices (`security/rbac/`) before fulfilling administrative actions.
-6. **Client & Helper Boundaries**: Supabase client factories for browser, Server Components, and Server Actions (`@supabase/ssr`) are defined exclusively in `src/lib/db/supabase.ts`. Authentication-specific helper functions (e.g. `getServerSession()`, `requireUser()`) reside in `src/lib/auth/` and consume those clients. Never create competing Supabase client factories in `src/lib/auth/`. Executable edge middleware resides at `src/middleware.ts`. The root `security/` directory is strictly for documentation and specifications.
+6. **Client & Helper Boundaries**: Supabase client factories for browser, Server Components, and Server Actions (`@supabase/ssr`) are defined exclusively in `src/lib/db/supabase.ts`. Authentication-specific helper functions (e.g. `getServerSession()`, `requireUser()`) reside in `src/lib/auth/` and consume those clients. Never create competing Supabase client factories in `src/lib/auth/`. Executable edge request interception resides strictly at `src/proxy.ts` (exporting function `proxy`). The root `security/` directory is strictly for documentation and specifications.
 
 ---
 
 ## Article VIII: Security
-1. **Row-Level Security (Database Projects)**: For any project utilizing a database, every table must have `ENABLE ROW LEVEL SECURITY;` applied before shipping to production. Tables storing public data (e.g. public blogs, published products) must have explicit public-read policies; tables storing user, tenant, or sensitive data must enforce strict ownership filters. Never rely solely on application-layer filtering.
+1. **Row-Level Security (Database Projects)**: For any project utilizing a database, every table must have `ENABLE ROW LEVEL SECURITY;` applied before shipping to production. Tables storing public data (e.g. public blogs, published products) must have explicit public-read policies; tables storing user, tenant, or sensitive data must enforce strict ownership filters. Never rely solely on application-layer filtering for client-accessible Supabase endpoints.
 2. **Secret Isolation**:
    - Never expose `SUPABASE_SERVICE_ROLE_KEY`, database connection strings, or private API keys to the browser.
    - Only variables explicitly prefixed with `NEXT_PUBLIC_` may appear in client bundles.
 3. **Input Sanitization & Output Encoding**: Protect against XSS, injection, and SSRF attacks across all form inputs and URL parameters.
-4. **Security Headers**: Maintain strict HTTP security headers (Content Security Policy, HSTS, X-Frame-Options) in Next.js middleware and configuration.
-5. **Code Location Boundary**: Executable edge middleware must reside strictly at `src/middleware.ts`. Executable RLS SQL migrations must reside strictly in `supabase/migrations/*.sql`. The root `security/` directory is reserved exclusively for security governance, access matrices, and specification documents.
+4. **Security Headers**: Maintain strict HTTP security headers (Content Security Policy, HSTS, X-Frame-Options) in Next.js edge proxy (`src/proxy.ts`) and `next.config.ts`.
+5. **Code Location Boundary**: Executable edge request interception must reside strictly at `src/proxy.ts` (Next.js 16+ convention). Executable RLS SQL migrations must reside strictly in `supabase/migrations/*.sql`. The root `security/` directory is reserved exclusively for security governance, access matrices, and specification documents.
 
 ---
 
@@ -155,7 +168,7 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
 
 ## Article XI: UI Quality & Design Polish
 1. **Never Accept Bare/Generic Styling**: Every interface must look polished, intentional, and modern. Avoid default browser elements or generic unstyled placeholders.
-2. **Curated Design Tokens**: Use consistent color palettes (e.g., Tailwind Zinc/Slate neutrals with a single brand accent), refined typography (Geist, Inter, Outfit), and harmonious spacing.
+2. **Curated Design Tokens**: Use consistent color palettes (e.g., Tailwind Zinc/Slate neutrals with a single brand accent), refined typography (Geist, Inter, Outfit), and harmonious spacing. When [`design-system/MASTER.md`](design-system/MASTER.md) exists, it is the canonical visual & interaction implementation system: use its tokens, typography, spacing, and component patterns; `design-system/pages/<page>.md` overrides govern their routes. The design system derives from `brain.md` §9 (brand intent) and remains strictly subordinate to it.
 3. **State Completeness**: Every data-driven UI view must gracefully handle:
    - **Loading state**: Skeleton loaders or subtle spinners (no layout shifts).
    - **Empty state**: Informative illustrations/text with clear calls to action.
@@ -189,6 +202,7 @@ This repository provides an enterprise-ready baseline (Next.js + Prisma + Supaba
    - `fix(billing): resolve invoice rounding discrepancy`
    - `refactor(db): extract user repository from server action`
    - `docs(adr): record decision to adopt pgvector`
+   - `wip(init): record interrupted initialization progress` *(initializer interruption checkpoints only)*
 3. **Clean Worktrees**: Never commit temporary debug scripts, `.env.local` files, or OS artifacts.
 
 ---

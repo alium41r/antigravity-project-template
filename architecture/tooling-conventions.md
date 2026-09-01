@@ -39,8 +39,15 @@ The repository enforces a single primary path alias pointing to the application 
 
 ### Next.js Configuration (`next.config.ts`)
 - Use TypeScript for the configuration entry point (`next.config.ts`).
-- Keep security headers (CSP, HSTS, X-Frame-Options) declared in `next.config.ts` or `src/middleware.ts`.
+- Keep security headers (CSP, HSTS, X-Frame-Options) declared in `next.config.ts` or edge proxy (`src/proxy.ts`).
 - Server-only modules must be protected against accidental client bundling via Next.js package boundaries or the `server-only` package.
+
+### Lint Script (Next.js 16+)
+- Next.js 16 removed `next lint`. The canonical package script is:
+  ```json
+  "lint": "eslint ."
+  ```
+- ESLint uses flat config (`eslint.config.mjs`) with `eslint-config-next` — see §4.
 
 ---
 
@@ -72,22 +79,44 @@ import type { UserProfile } from '@/types';
 - **Configuration Requirement**: In `vitest.config.ts`, alias resolution must mirror `tsconfig.json`:
   ```typescript
   import { defineConfig } from 'vitest/config';
+  import react from '@vitejs/plugin-react';
   import path from 'path';
 
   export default defineConfig({
+    plugins: [react()], // Required when tests import .tsx components (T3–T6)
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
     },
     test: {
-      environment: 'node',
+      environment: 'jsdom', // Component/hook tests need DOM; pure-node tests opt out per-file
       globals: true,
       include: ['testing/**/*.{test,spec}.{ts,tsx}'],
     },
   });
   ```
+  - For T1–T2 projects without component tests, `environment: 'node'` and no React plugin are acceptable.
+  - Pure-logic test files may opt out of jsdom with `// @vitest-environment node` at the top.
 - **Rule**: Never import via fragile relative traversal such as `../../src/server/...`. Always use `@/...`.
+
+### End-to-End Testing (Playwright, T4–T6)
+- **Provisioning**: `@playwright/test` is installed only for projects with critical multi-step flows (e-commerce checkout, SaaS onboarding, auth). T1–T3 projects skip it.
+- **Configuration**: Root `playwright.config.ts` points `testDir` at `testing/e2e/`:
+  ```typescript
+  import { defineConfig } from '@playwright/test';
+
+  export default defineConfig({
+    testDir: './testing/e2e',
+    use: { baseURL: 'http://localhost:3000' },
+    webServer: {
+      command: 'npm run dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: true,
+    },
+  });
+  ```
+- **Browser binaries**: run `npx playwright install` once locally (`npx playwright install --with-deps` on CI images). Package script: `"test:e2e": "playwright test"`.
 
 ---
 

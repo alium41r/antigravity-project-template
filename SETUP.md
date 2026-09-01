@@ -49,7 +49,7 @@ Before running commands or modifying files:
 4. **Declare Stack Decisions**: In Section 15 (*Key Technical Assumptions*), explicitly answer:
    - `Database Required`: `[Yes / No]`
    - `Authentication Required`: `[Yes / No]`
-   - `Rendering Strategy`: `[SSR / Static Export / Hybrid]`
+   - `Rendering Strategy`: `[Server Components + SSR default / Static Export (SSG) / Client-Heavy]`
    - `Styling Choice`: `[Tailwind CSS / CSS Modules]`
 
 ---
@@ -188,8 +188,9 @@ Prisma is used strictly as an ORM and type-safe query client. **Prisma never run
    cp .env.example .env.local
    ```
 2. **Populate Secrets**:
-   - For public websites: Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"` and `NODE_ENV="development"`.
+   - For public websites: Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"`.
    - For database/auth projects: Fill `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DIRECT_URL`, and `DATABASE_URL` using values from Step 5.
+   - *Note*: Do not set `NODE_ENV` in environment files — Next.js sets it automatically. Use `APP_ENV` for custom environment names.
 3. **Rule**: Never commit `.env.local` to Git. Verify `.gitignore` rules.
 
 ---
@@ -197,20 +198,28 @@ Prisma is used strictly as an ORM and type-safe query client. **Prisma never run
 ### Step 8: Configure Tooling & Testing Infrastructure
 1. **Install Vitest and Testing Utilities**:
    ```bash
-   npm install -D vitest @vitejs/plugin-react jsdom
+   npm install -D vitest
+   # For projects with component/browser-adjacent tests (T3–T6), also:
+   npm install -D @vitejs/plugin-react jsdom
    ```
 2. **Create `vitest.config.ts`** at the project root with the `@/*` path alias mapped to `./src` as defined in [`architecture/tooling-conventions.md`](architecture/tooling-conventions.md).
-3. **Install Code Quality Tooling**:
+3. **End-to-End Testing (T4–T6 or projects with critical multi-step flows)**:
+   ```bash
+   npm install -D @playwright/test
+   ```
+   Create `playwright.config.ts` pointing `testDir` at `testing/e2e/`. Install browser binaries once with `npx playwright install` (and `npx playwright install --with-deps` on CI images). Lightweight T1–T3 projects skip Playwright — E2E testing is not provisioned for projects that genuinely do not need it.
+4. **Install Code Quality Tooling**:
    ```bash
    npm install -D prettier eslint eslint-config-next
    ```
    Add root `.prettierrc` and `eslint.config.mjs`.
+   The canonical lint script is `"lint": "eslint ."` (Next.js 16 removed `next lint`).
 
 ---
 
 ### Step 9: Author Architecture Specifications & PRDs
 1. **Synchronize Product Vision**: Fill [`product/vision.md`](product/vision.md) with concise summaries extracted from `brain.md`.
-2. **Draft MVP PRD**: Create `specifications/prds/001-mvp.md` detailing user stories, acceptance criteria, and API requirements for the initial release.
+2. **Draft MVP PRD** *(T3–T6 projects)*: Create `specifications/prds/001-mvp.md` detailing user stories, acceptance criteria, and API requirements for the initial release. For T1–T2 lightweight sites, record MVP scope directly in `brain.md` §12 (*Current Project State*) instead.
 3. **Record Architectural Decisions**: If any default technology was overridden (e.g. choosing Jest over Vitest, or CSS Modules over Tailwind), record an ADR in `decisions/records/` using `decisions/templates/adr-template.md`.
 
 ---
@@ -218,8 +227,9 @@ Prisma is used strictly as an ORM and type-safe query client. **Prisma never run
 ### Step 10: Perform Initial Security Review
 1. **Secret Isolation**: Confirm that `SUPABASE_SERVICE_ROLE_KEY` and database passwords appear strictly in server-side files and never leak to `NEXT_PUBLIC_` variables.
 2. **Database Perimeter**: If a database is active, verify that every table has Row-Level Security enabled.
-3. **HTTP Security Headers**: Verify CSP, HSTS, and frame protection in `next.config.ts` or `src/middleware.ts`.
+3. **HTTP Security Headers**: Verify CSP, HSTS, and frame protection in `next.config.ts` or `src/proxy.ts`.
 4. **Input Boundary**: Verify that Zod is set up for validating all incoming request payloads.
+5. **Skill-Based Audits**: For T4–T6 projects, delegate this review to the `vibe-security` skill (full audit scoped to `brain.md` §0 tier + §14 active integrations). Before any first production deployment, run the full `vibe-security` audit again as a release gate.
 
 ---
 
